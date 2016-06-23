@@ -23,19 +23,8 @@ function start() {
     // Initialize the GL context
     gl = initWebGL(canvas);
 
-    // setup a GLSL program
-    var program = createProgramFromScripts(gl, ["2d-vertex-shader", "2d-fragment-shader"]);
+    var program = utils.addShaderProg(gl, 'shader.vert', 'shader.frag');
     gl.useProgram(program);
-
-    // SHADER_LOADER.load(
-    //     function(data) {
-    //         var particlesVertexShader = data.particles.vertex;
-    //         var particlesFragmentShader = data.particles.fragment;
-    //     }
-    // );
-
-    // var program = utils.addShaderProg(gl, 'fragment-shader.glsl', 'vertex-shader.glsl');
-    // gl.useProgram(program);
 
     // look up where the vertex data needs to go.
     var positionLocation = gl.getAttribLocation(program, "a_position");

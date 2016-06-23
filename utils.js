@@ -30,23 +30,10 @@ utils.loadShader = function(file, type) {
     var request = new XMLHttpRequest();
     request.open('GET', file, false); // `false` makes the request synchronous
     request.send(null);
-    console.log(request);
     cache = {
-        script: request.responseText,
+        script: request.response,
         type: type
     };
-
-    // $.ajax({
-    //     async: false, // need to wait... todo: deferred?
-    //     url: "shaders/" + file, //todo: use global config for shaders folder?
-    //     success: function(result) {
-    //         cache = {
-    //             script: result,
-    //             type: type
-    //         };
-    //     }
-    // });
-
     // store in global cache
     utils.allShaders[file] = cache;
 };
