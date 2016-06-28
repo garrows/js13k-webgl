@@ -40,11 +40,12 @@ function start() {
     // Initialize the GL context
     gl = initWebGL( canvas );
 
-    var program = utils.addShaderProg( gl, 'shader.vert', 'shader.frag' );
+    var program = utils.addShaderProg( gl, 'shader.vert.glsl', 'shader.frag.glsl' );
     gl.useProgram( program );
 
     // look up where the vertex data needs to go.
     var positionLocation = gl.getAttribLocation( program, "a_position" );
+    var colorLocation = gl.getAttribLocation( program, "a_color" );
 
     // lookup uniforms
     var matrixLocation = gl.getUniformLocation( program, "u_matrix" );
@@ -57,6 +58,14 @@ function start() {
 
     // Set Geometry.
     setGeometry( gl );
+
+    // Create a buffer for the colors.
+    var buffer = gl.createBuffer();
+    gl.bindBuffer( gl.ARRAY_BUFFER, buffer );
+    gl.enableVertexAttribArray( colorLocation );
+    gl.vertexAttribPointer( colorLocation, 4, gl.FLOAT, false, 0, 0 );
+    //Set the colors
+    setColors( gl );
 
     // Draw the scene.
     var lastTimestamp = 0;
@@ -84,7 +93,9 @@ function start() {
         gl.uniformMatrix3fv( matrixLocation, false, matrix );
 
         // Draw the geometry.
-        gl.drawArrays( gl.TRIANGLES, 0, 3 );
+        // gl.drawArrays( gl.TRIANGLES, 0, 3 );
+        gl.drawArrays( gl.TRIANGLES, 0, 6 );
+
 
         requestAnimationFrame( drawScene );
     }
@@ -167,15 +178,27 @@ function makeScale( sx, sy ) {
 }
 
 // Fill the buffer with the values that define a triangle.
+// function setGeometry( gl ) {
+//     gl.bufferData(
+//         gl.ARRAY_BUFFER,
+//         new Float32Array( [
+//             0, -100,
+//             150, 125, -175, 100
+//         ] ),
+//         gl.STATIC_DRAW );
+// }
+// Fill the buffer with the values that define a rectangle.
 function setGeometry( gl ) {
     gl.bufferData(
         gl.ARRAY_BUFFER,
-        new Float32Array( [
-            0, -100,
-            150, 125, -175, 100
+        new Float32Array( [ -150, -100,
+            150, -100, -150, 100,
+            150, -100, -150, 100,
+            150, 100
         ] ),
         gl.STATIC_DRAW );
 }
+
 // Returns a random integer from 0 to range - 1.
 function randomInt( range ) {
     return Math.floor( Math.random() * range );
@@ -195,4 +218,28 @@ function setRectangle( gl, x, y, width, height ) {
         x2, y1,
         x2, y2
     ] ), gl.STATIC_DRAW );
+}
+
+// Fill the buffer with colors for the 2 triangles
+// that make the rectangle.
+function setColors( gl ) {
+    // Pick 2 random colors.
+    var r1 = Math.random();
+    var b1 = Math.random();
+    var g1 = Math.random();
+    var r2 = Math.random();
+    var b2 = Math.random();
+    var g2 = Math.random();
+
+    gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array(
+            [ 0, 0, 0, 1,
+                r1, b1, g1, 1,
+                r1, b1, g1, 1,
+                r2, b2, g2, 1,
+                r2, b2, g2, 1,
+                0, 0, 0, 1,
+            ] ),
+        gl.STATIC_DRAW );
 }
