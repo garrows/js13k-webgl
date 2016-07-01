@@ -1,16 +1,16 @@
-/* global dat, utils, requestAnimationFrame, alert */
+/* global dat, requestAnimationFrame, alert */
 
-var data = { // eslint-disable-line
-    x: 200,
-    y: 150,
-    angle: 0,
-    scaleX: 1,
-    scaleY: 1,
-    fps: 0
-  },
-  gui = new dat.GUI(),
-  canvas = document.getElementById('glcanvas'),
-  gl = canvas.getContext('webgl')
+var data = {
+  x: 200,
+  y: 150,
+  angle: 0,
+  scaleX: 1,
+  scaleY: 1,
+  fps: 0
+}
+var gui = new dat.GUI()
+var canvas = document.getElementById('glcanvas')
+var gl = canvas.getContext('webgl')
 
 gui.remember(data)
 gui.add(data, 'x', 0, 400)
@@ -54,22 +54,44 @@ var colorLocation = gl.getAttribLocation(program, 'a_color')
 var matrixLocation = gl.getUniformLocation(program, 'u_matrix')
 
 // Create a buffer.
-var buffer = gl.createBuffer()
-gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+var geometryBuffer = gl.createBuffer()
+gl.bindBuffer(gl.ARRAY_BUFFER, geometryBuffer)
 gl.enableVertexAttribArray(positionLocation)
 gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0)
 
-// Set Geometry.
-setGeometry(gl)
+// Fill the buffer with the values that define a rectangle.
+gl.bufferData(
+  gl.ARRAY_BUFFER,
+  new Float32Array([ -150, -100,
+    150, -100, -150, 100,
+    150, -100, -150, 100,
+    150, 100
+  ]),
+  gl.STATIC_DRAW
+)
 
 // Create a buffer for the colors.
-buffer = gl.createBuffer()
-gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+var colorBuffer = gl.createBuffer()
+gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer)
 gl.enableVertexAttribArray(colorLocation)
 gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0)
 
-// Set the colors
-setColors(gl)
+// Fill the buffer with colors for the 2 triangles
+// that make the rectangle.
+// Pick 2 random colors.
+
+gl.bufferData(
+  gl.ARRAY_BUFFER,
+  new Float32Array([
+    // red, green, blue, alpha
+    0, 0, 0, 1, // Black
+    1, 0, 0, 1, // Red
+    1, 0, 0, 1, // Red
+    0, 0, 1, 1, // Blue
+    0, 0, 1, 1, // Blue
+    0, 0, 0, 1 // Black
+  ]),
+  gl.STATIC_DRAW)
 
 // Draw the scene.
 var lastTimestamp = 0
@@ -177,40 +199,4 @@ function makeScale (sx, sy) {
     0, sy, 0,
     0, 0, 1
   ]
-}
-
-// Fill the buffer with the values that define a rectangle.
-function setGeometry (gl) {
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
-    new Float32Array([ -150, -100,
-      150, -100, -150, 100,
-      150, -100, -150, 100,
-      150, 100
-    ]),
-    gl.STATIC_DRAW)
-}
-
-// Fill the buffer with colors for the 2 triangles
-// that make the rectangle.
-function setColors (gl) {
-  // Pick 2 random colors.
-  var r1 = Math.random()
-  var b1 = Math.random()
-  var g1 = Math.random()
-  var r2 = Math.random()
-  var b2 = Math.random()
-  var g2 = Math.random()
-
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
-    new Float32Array(
-      [ 0, 0, 0, 1,
-        r1, b1, g1, 1,
-        r1, b1, g1, 1,
-        r2, b2, g2, 1,
-        r2, b2, g2, 1,
-        0, 0, 0, 1
-      ]),
-    gl.STATIC_DRAW)
 }
