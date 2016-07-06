@@ -1,15 +1,19 @@
 /* global dat, requestAnimationFrame, alert */
 
 var data = {
-  x: 100,
-  y: 150,
-  z: 0,
-  angleX: Math.PI / 8,
-  angleY: Math.PI / 8,
-  angleZ: Math.PI * 2 - Math.PI / 8,
+  x: 0,
+  y: 0,
+  z: -360,
+  angleX: Math.PI / 16,
+  angleY: Math.PI * 0.8,
+  angleZ: Math.PI,
   scaleX: 1,
   scaleY: 1,
   scaleZ: 1,
+  animate: true,
+  fov: 1.0471975511965976,
+  zNear: 1,
+  zFar: 1000,
   fps: 0
 }
 var gui = new dat.GUI()
@@ -17,15 +21,19 @@ var canvas = document.getElementById('glcanvas')
 var gl = canvas.getContext('webgl')
 
 gui.remember(data)
-gui.add(data, 'x', 0, 400)
-gui.add(data, 'y', 0, 300)
-gui.add(data, 'z', 0, 300)
+gui.add(data, 'x', -canvas.width, canvas.width)
+gui.add(data, 'y', -canvas.height, canvas.height)
+gui.add(data, 'z', -600, 0)
 gui.add(data, 'angleX', 0, 2 * Math.PI)
-gui.add(data, 'angleY', 0, 2 * Math.PI)
+gui.add(data, 'angleY', 0, 2 * Math.PI).listen()
 gui.add(data, 'angleZ', 0, 2 * Math.PI)
 gui.add(data, 'scaleX', -5, 5)
 gui.add(data, 'scaleY', -5, 5)
 gui.add(data, 'scaleZ', -5, 5)
+gui.add(data, 'fov', 0, Math.PI)
+gui.add(data, 'zNear', 1, 1000)
+gui.add(data, 'zFar', 0, 1000)
+gui.add(data, 'animate')
 gui.add(data, 'fps').listen()
 
 var program = gl.createProgram()
@@ -58,8 +66,6 @@ gl.enable(gl.DEPTH_TEST)
 
 // look up where the vertex data needs to go.
 var positionLocation = gl.getAttribLocation(program, 'a_position')
-
-// lookup uniforms
 var colorLocation = gl.getAttribLocation(program, 'a_color')
 var matrixLocation = gl.getUniformLocation(program, 'u_matrix')
 
@@ -93,13 +99,17 @@ function drawScene (timestamp) {
   // Clear the canvas AND the depth buffer.
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
+  if (data.animate) {
+    data.angleY = data.angleY > Math.PI * 2 ? 0 : data.angleY + 0.005 * dt
+  }
+
   // Compute the matrices
-  var projectionMatrix = make2DProjection(canvas.clientWidth, canvas.clientHeight, 400)
+  var aspect = canvas.width / canvas.height
+  var projectionMatrix = makePerspective(data.fov, aspect, data.zNear, data.zFar)
   var translationMatrix = makeTranslation(data.x, data.y, data.z)
   var rotationXMatrix = makeXRotation(data.angleX)
   var rotationYMatrix = makeYRotation(data.angleY)
   var rotationZMatrix = makeZRotation(data.angleZ)
-
   var scaleMatrix = makeScale(data.scaleX, data.scaleY, data.scaleZ)
 
   // Multiply the matrices.
@@ -120,16 +130,6 @@ function drawScene (timestamp) {
 }
 
 requestAnimationFrame(drawScene)
-
-function make2DProjection (width, height, depth) {
-  // Note: This matrix flips the Y axis so 0 is at the top.
-  return [
-    2 / width, 0, 0, 0,
-    0, -2 / height, 0, 0,
-    0, 0, 2 / depth, 0,
-    -1, 1, 0, 1
-  ]
-}
 
 function makeTranslation (tx, ty, tz) {
   return [
@@ -181,6 +181,18 @@ function makeScale (sx, sy, sz) {
     0, sy, 0, 0,
     0, 0, sz, 0,
     0, 0, 0, 1
+  ]
+}
+
+function makePerspective (fieldOfViewInRadians, aspect, near, far) {
+  var f = Math.tan(Math.PI * 0.5 - 0.5 * fieldOfViewInRadians)
+  var rangeInv = 1.0 / (near - far)
+
+  return [
+    f / aspect, 0, 0, 0,
+    0, f, 0, 0,
+    0, 0, (near + far) * rangeInv, -1,
+    0, 0, near * far * rangeInv * 2, 0
   ]
 }
 
