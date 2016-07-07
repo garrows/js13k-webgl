@@ -3,17 +3,17 @@
 var data = {
   x: 0,
   y: 0,
-  z: -360,
+  z: 0,
   cameraX: 0,
   cameraY: 0,
   cameraZ: 0,
-  angleX: Math.PI / 16,
-  angleY: Math.PI * 0.8,
-  angleZ: Math.PI,
+  angleX: 0,
+  angleY: 0,
+  angleZ: 0,
   scaleX: 1,
   scaleY: 1,
   scaleZ: 1,
-  animate: true,
+  animateSpeed: 0.001,
   fov: 1.0471975511965976,
   zNear: 1,
   zFar: 1000,
@@ -24,9 +24,9 @@ var canvas = document.getElementById('glcanvas')
 var gl = canvas.getContext('webgl')
 
 gui.remember(data)
-gui.add(data, 'x', -canvas.width, canvas.width)
-gui.add(data, 'y', -canvas.height, canvas.height)
-gui.add(data, 'z', -600, 0)
+gui.add(data, 'x', -300, 300)
+gui.add(data, 'y', -300, 300)
+gui.add(data, 'z', -300, 300)
 gui.add(data, 'cameraX', 0, 2 * Math.PI)
 gui.add(data, 'cameraY', 0, 2 * Math.PI).listen()
 gui.add(data, 'cameraZ', 0, 2 * Math.PI)
@@ -39,7 +39,7 @@ gui.add(data, 'scaleZ', -5, 5)
 gui.add(data, 'fov', 0, Math.PI)
 gui.add(data, 'zNear', 1, 1000)
 gui.add(data, 'zFar', 0, 1000)
-gui.add(data, 'animate')
+gui.add(data, 'animateSpeed', 0, 0.005)
 gui.add(data, 'fps').listen()
 
 var program = gl.createProgram()
@@ -108,21 +108,25 @@ function drawScene (timestamp) {
   // Clear the canvas AND the depth buffer.
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
-  if (data.animate) {
-    data.cameraY = data.cameraY > Math.PI * 2 ? 0 : data.cameraY + 0.002 * dt
-  }
+  // Move around the screen
+  data.cameraY = data.cameraY > Math.PI * 2 ? 0 : data.cameraY + data.animateSpeed * dt
 
   // Compute the matrices
   var aspect = canvas.width / canvas.height
   var projectionMatrix = makePerspective(data.fov, aspect, data.zNear, data.zFar)
+  var rotationXMatrix = makeXRotation(data.angleX)
+  var rotationYMatrix = makeYRotation(data.angleY)
+  var rotationZMatrix = makeZRotation(data.angleZ)
+  var scaleMatrix = makeScale(data.scaleX, data.scaleY, data.scaleZ)
 
   // Compute the position of the first F
   var fPosition = [radius, 0, 0]
 
   // Use matrix math to compute a position on the circle.
   var cameraMatrix = makeTranslation(0, 50, radius * 1.5)
-  cameraMatrix = matrixMultiply(
-    cameraMatrix, makeYRotation(data.cameraY))
+  cameraMatrix = matrixMultiply(cameraMatrix, makeXRotation(data.cameraX))
+  cameraMatrix = matrixMultiply(cameraMatrix, makeYRotation(data.cameraY))
+  cameraMatrix = matrixMultiply(cameraMatrix, makeZRotation(data.cameraZ))
 
   // Get the camera's postion from the matrix we computed
   var cameraPosition = [
@@ -133,7 +137,7 @@ function drawScene (timestamp) {
   var up = [0, 1, 0]
 
   // Compute the camera's matrix using look at.
-  var cameraMatrix = makeLookAt(cameraPosition, fPosition, up)
+  cameraMatrix = makeLookAt(cameraPosition, fPosition, up)
 
   // Make a view matrix from the camera matrix.
   var viewMatrix = makeInverse(cameraMatrix)
@@ -144,10 +148,14 @@ function drawScene (timestamp) {
 
     var x = Math.cos(angle) * radius
     var z = Math.sin(angle) * radius
-    var translationMatrix = makeTranslation(x, 0, z)
+    var translationMatrix = makeTranslation(x + data.x, data.y, z + data.z)
 
     // Multiply the matrices.
     var matrix = translationMatrix
+    matrix = matrixMultiply(matrix, scaleMatrix)
+    matrix = matrixMultiply(matrix, rotationXMatrix)
+    matrix = matrixMultiply(matrix, rotationYMatrix)
+    matrix = matrixMultiply(matrix, rotationZMatrix)
     matrix = matrixMultiply(matrix, viewMatrix)
     matrix = matrixMultiply(matrix, projectionMatrix)
 
@@ -237,39 +245,39 @@ function makeInverse (m) {
   var m31 = m[3 * 4 + 1]
   var m32 = m[3 * 4 + 2]
   var m33 = m[3 * 4 + 3]
-  var tmp_0 = m22 * m33
-  var tmp_1 = m32 * m23
-  var tmp_2 = m12 * m33
-  var tmp_3 = m32 * m13
-  var tmp_4 = m12 * m23
-  var tmp_5 = m22 * m13
-  var tmp_6 = m02 * m33
-  var tmp_7 = m32 * m03
-  var tmp_8 = m02 * m23
-  var tmp_9 = m22 * m03
-  var tmp_10 = m02 * m13
-  var tmp_11 = m12 * m03
-  var tmp_12 = m20 * m31
-  var tmp_13 = m30 * m21
-  var tmp_14 = m10 * m31
-  var tmp_15 = m30 * m11
-  var tmp_16 = m10 * m21
-  var tmp_17 = m20 * m11
-  var tmp_18 = m00 * m31
-  var tmp_19 = m30 * m01
-  var tmp_20 = m00 * m21
-  var tmp_21 = m20 * m01
-  var tmp_22 = m00 * m11
-  var tmp_23 = m10 * m01
+  var tmp0 = m22 * m33
+  var tmp1 = m32 * m23
+  var tmp2 = m12 * m33
+  var tmp3 = m32 * m13
+  var tmp4 = m12 * m23
+  var tmp5 = m22 * m13
+  var tmp6 = m02 * m33
+  var tmp7 = m32 * m03
+  var tmp8 = m02 * m23
+  var tmp9 = m22 * m03
+  var tmp10 = m02 * m13
+  var tmp11 = m12 * m03
+  var tmp12 = m20 * m31
+  var tmp13 = m30 * m21
+  var tmp14 = m10 * m31
+  var tmp15 = m30 * m11
+  var tmp16 = m10 * m21
+  var tmp17 = m20 * m11
+  var tmp18 = m00 * m31
+  var tmp19 = m30 * m01
+  var tmp20 = m00 * m21
+  var tmp21 = m20 * m01
+  var tmp22 = m00 * m11
+  var tmp23 = m10 * m01
 
-  var t0 = (tmp_0 * m11 + tmp_3 * m21 + tmp_4 * m31) -
-    (tmp_1 * m11 + tmp_2 * m21 + tmp_5 * m31)
-  var t1 = (tmp_1 * m01 + tmp_6 * m21 + tmp_9 * m31) -
-    (tmp_0 * m01 + tmp_7 * m21 + tmp_8 * m31)
-  var t2 = (tmp_2 * m01 + tmp_7 * m11 + tmp_10 * m31) -
-    (tmp_3 * m01 + tmp_6 * m11 + tmp_11 * m31)
-  var t3 = (tmp_5 * m01 + tmp_8 * m11 + tmp_11 * m21) -
-    (tmp_4 * m01 + tmp_9 * m11 + tmp_10 * m21)
+  var t0 = (tmp0 * m11 + tmp3 * m21 + tmp4 * m31) -
+    (tmp1 * m11 + tmp2 * m21 + tmp5 * m31)
+  var t1 = (tmp1 * m01 + tmp6 * m21 + tmp9 * m31) -
+    (tmp0 * m01 + tmp7 * m21 + tmp8 * m31)
+  var t2 = (tmp2 * m01 + tmp7 * m11 + tmp10 * m31) -
+    (tmp3 * m01 + tmp6 * m11 + tmp11 * m31)
+  var t3 = (tmp5 * m01 + tmp8 * m11 + tmp11 * m21) -
+    (tmp4 * m01 + tmp9 * m11 + tmp10 * m21)
 
   var d = 1.0 / (m00 * t0 + m10 * t1 + m20 * t2 + m30 * t3)
 
@@ -278,30 +286,30 @@ function makeInverse (m) {
     d * t1,
     d * t2,
     d * t3,
-    d * ((tmp_1 * m10 + tmp_2 * m20 + tmp_5 * m30) -
-    (tmp_0 * m10 + tmp_3 * m20 + tmp_4 * m30)),
-    d * ((tmp_0 * m00 + tmp_7 * m20 + tmp_8 * m30) -
-    (tmp_1 * m00 + tmp_6 * m20 + tmp_9 * m30)),
-    d * ((tmp_3 * m00 + tmp_6 * m10 + tmp_11 * m30) -
-    (tmp_2 * m00 + tmp_7 * m10 + tmp_10 * m30)),
-    d * ((tmp_4 * m00 + tmp_9 * m10 + tmp_10 * m20) -
-    (tmp_5 * m00 + tmp_8 * m10 + tmp_11 * m20)),
-    d * ((tmp_12 * m13 + tmp_15 * m23 + tmp_16 * m33) -
-    (tmp_13 * m13 + tmp_14 * m23 + tmp_17 * m33)),
-    d * ((tmp_13 * m03 + tmp_18 * m23 + tmp_21 * m33) -
-    (tmp_12 * m03 + tmp_19 * m23 + tmp_20 * m33)),
-    d * ((tmp_14 * m03 + tmp_19 * m13 + tmp_22 * m33) -
-    (tmp_15 * m03 + tmp_18 * m13 + tmp_23 * m33)),
-    d * ((tmp_17 * m03 + tmp_20 * m13 + tmp_23 * m23) -
-    (tmp_16 * m03 + tmp_21 * m13 + tmp_22 * m23)),
-    d * ((tmp_14 * m22 + tmp_17 * m32 + tmp_13 * m12) -
-    (tmp_16 * m32 + tmp_12 * m12 + tmp_15 * m22)),
-    d * ((tmp_20 * m32 + tmp_12 * m02 + tmp_19 * m22) -
-    (tmp_18 * m22 + tmp_21 * m32 + tmp_13 * m02)),
-    d * ((tmp_18 * m12 + tmp_23 * m32 + tmp_15 * m02) -
-    (tmp_22 * m32 + tmp_14 * m02 + tmp_19 * m12)),
-    d * ((tmp_22 * m22 + tmp_16 * m02 + tmp_21 * m12) -
-    (tmp_20 * m12 + tmp_23 * m22 + tmp_17 * m02))
+    d * ((tmp1 * m10 + tmp2 * m20 + tmp5 * m30) -
+    (tmp0 * m10 + tmp3 * m20 + tmp4 * m30)),
+    d * ((tmp0 * m00 + tmp7 * m20 + tmp8 * m30) -
+    (tmp1 * m00 + tmp6 * m20 + tmp9 * m30)),
+    d * ((tmp3 * m00 + tmp6 * m10 + tmp11 * m30) -
+    (tmp2 * m00 + tmp7 * m10 + tmp10 * m30)),
+    d * ((tmp4 * m00 + tmp9 * m10 + tmp10 * m20) -
+    (tmp5 * m00 + tmp8 * m10 + tmp11 * m20)),
+    d * ((tmp12 * m13 + tmp15 * m23 + tmp16 * m33) -
+    (tmp13 * m13 + tmp14 * m23 + tmp17 * m33)),
+    d * ((tmp13 * m03 + tmp18 * m23 + tmp21 * m33) -
+    (tmp12 * m03 + tmp19 * m23 + tmp20 * m33)),
+    d * ((tmp14 * m03 + tmp19 * m13 + tmp22 * m33) -
+    (tmp15 * m03 + tmp18 * m13 + tmp23 * m33)),
+    d * ((tmp17 * m03 + tmp20 * m13 + tmp23 * m23) -
+    (tmp16 * m03 + tmp21 * m13 + tmp22 * m23)),
+    d * ((tmp14 * m22 + tmp17 * m32 + tmp13 * m12) -
+    (tmp16 * m32 + tmp12 * m12 + tmp15 * m22)),
+    d * ((tmp20 * m32 + tmp12 * m02 + tmp19 * m22) -
+    (tmp18 * m22 + tmp21 * m32 + tmp13 * m02)),
+    d * ((tmp18 * m12 + tmp23 * m32 + tmp15 * m02) -
+    (tmp22 * m32 + tmp14 * m02 + tmp19 * m12)),
+    d * ((tmp22 * m22 + tmp16 * m02 + tmp21 * m12) -
+    (tmp20 * m12 + tmp23 * m22 + tmp17 * m02))
   ]
 }
 
@@ -537,163 +545,163 @@ function setColors (gl) {
 }
 
 // Fill the buffer with the values that define a letter 'F'.
-function setGeometry(gl) {
+function setGeometry (gl) {
   var positions = new Float32Array([
-          // left column front
-          0,   0,  0,
-          0, 150,  0,
-          30,   0,  0,
-          0, 150,  0,
-          30, 150,  0,
-          30,   0,  0,
+    // left column front
+    0, 0, 0,
+    0, 150, 0,
+    30, 0, 0,
+    0, 150, 0,
+    30, 150, 0,
+    30, 0, 0,
 
-          // top rung front
-          30,   0,  0,
-          30,  30,  0,
-          100,   0,  0,
-          30,  30,  0,
-          100,  30,  0,
-          100,   0,  0,
+    // top rung front
+    30, 0, 0,
+    30, 30, 0,
+    100, 0, 0,
+    30, 30, 0,
+    100, 30, 0,
+    100, 0, 0,
 
-          // middle rung front
-          30,  60,  0,
-          30,  90,  0,
-          67,  60,  0,
-          30,  90,  0,
-          67,  90,  0,
-          67,  60,  0,
+    // middle rung front
+    30, 60, 0,
+    30, 90, 0,
+    67, 60, 0,
+    30, 90, 0,
+    67, 90, 0,
+    67, 60, 0,
 
-          // left column back
-            0,   0,  30,
-           30,   0,  30,
-            0, 150,  30,
-            0, 150,  30,
-           30,   0,  30,
-           30, 150,  30,
+    // left column back
+    0, 0, 30,
+    30, 0, 30,
+    0, 150, 30,
+    0, 150, 30,
+    30, 0, 30,
+    30, 150, 30,
 
-          // top rung back
-           30,   0,  30,
-          100,   0,  30,
-           30,  30,  30,
-           30,  30,  30,
-          100,   0,  30,
-          100,  30,  30,
+    // top rung back
+    30, 0, 30,
+    100, 0, 30,
+    30, 30, 30,
+    30, 30, 30,
+    100, 0, 30,
+    100, 30, 30,
 
-          // middle rung back
-           30,  60,  30,
-           67,  60,  30,
-           30,  90,  30,
-           30,  90,  30,
-           67,  60,  30,
-           67,  90,  30,
+    // middle rung back
+    30, 60, 30,
+    67, 60, 30,
+    30, 90, 30,
+    30, 90, 30,
+    67, 60, 30,
+    67, 90, 30,
 
-          // top
-            0,   0,   0,
-          100,   0,   0,
-          100,   0,  30,
-            0,   0,   0,
-          100,   0,  30,
-            0,   0,  30,
+    // top
+    0, 0, 0,
+    100, 0, 0,
+    100, 0, 30,
+    0, 0, 0,
+    100, 0, 30,
+    0, 0, 30,
 
-          // top rung right
-          100,   0,   0,
-          100,  30,   0,
-          100,  30,  30,
-          100,   0,   0,
-          100,  30,  30,
-          100,   0,  30,
+    // top rung right
+    100, 0, 0,
+    100, 30, 0,
+    100, 30, 30,
+    100, 0, 0,
+    100, 30, 30,
+    100, 0, 30,
 
-          // under top rung
-          30,   30,   0,
-          30,   30,  30,
-          100,  30,  30,
-          30,   30,   0,
-          100,  30,  30,
-          100,  30,   0,
+    // under top rung
+    30, 30, 0,
+    30, 30, 30,
+    100, 30, 30,
+    30, 30, 0,
+    100, 30, 30,
+    100, 30, 0,
 
-          // between top rung and middle
-          30,   30,   0,
-          30,   60,  30,
-          30,   30,  30,
-          30,   30,   0,
-          30,   60,   0,
-          30,   60,  30,
+    // between top rung and middle
+    30, 30, 0,
+    30, 60, 30,
+    30, 30, 30,
+    30, 30, 0,
+    30, 60, 0,
+    30, 60, 30,
 
-          // top of middle rung
-          30,   60,   0,
-          67,   60,  30,
-          30,   60,  30,
-          30,   60,   0,
-          67,   60,   0,
-          67,   60,  30,
+    // top of middle rung
+    30, 60, 0,
+    67, 60, 30,
+    30, 60, 30,
+    30, 60, 0,
+    67, 60, 0,
+    67, 60, 30,
 
-          // right of middle rung
-          67,   60,   0,
-          67,   90,  30,
-          67,   60,  30,
-          67,   60,   0,
-          67,   90,   0,
-          67,   90,  30,
+    // right of middle rung
+    67, 60, 0,
+    67, 90, 30,
+    67, 60, 30,
+    67, 60, 0,
+    67, 90, 0,
+    67, 90, 30,
 
-          // bottom of middle rung.
-          30,   90,   0,
-          30,   90,  30,
-          67,   90,  30,
-          30,   90,   0,
-          67,   90,  30,
-          67,   90,   0,
+    // bottom of middle rung.
+    30, 90, 0,
+    30, 90, 30,
+    67, 90, 30,
+    30, 90, 0,
+    67, 90, 30,
+    67, 90, 0,
 
-          // right of bottom
-          30,   90,   0,
-          30,  150,  30,
-          30,   90,  30,
-          30,   90,   0,
-          30,  150,   0,
-          30,  150,  30,
+    // right of bottom
+    30, 90, 0,
+    30, 150, 30,
+    30, 90, 30,
+    30, 90, 0,
+    30, 150, 0,
+    30, 150, 30,
 
-          // bottom
-          0,   150,   0,
-          0,   150,  30,
-          30,  150,  30,
-          0,   150,   0,
-          30,  150,  30,
-          30,  150,   0,
+    // bottom
+    0, 150, 0,
+    0, 150, 30,
+    30, 150, 30,
+    0, 150, 0,
+    30, 150, 30,
+    30, 150, 0,
 
-          // left side
-          0,   0,   0,
-          0,   0,  30,
-          0, 150,  30,
-          0,   0,   0,
-          0, 150,  30,
-          0, 150,   0]);
+    // left side
+    0, 0, 0,
+    0, 0, 30,
+    0, 150, 30,
+    0, 0, 0,
+    0, 150, 30,
+    0, 150, 0])
 
   // Center the F around the origin and Flip it around. We do this because
-  // we're in 3D now with and +Y is up where as before when we started with 2D
-  // we had +Y as down.
+    // we're in 3D now with and +Y is up where as before when we started with 2D
+    // we had +Y as down.
 
   // We could do by changing all the values above but I'm lazy.
   // We could also do it with a matrix at draw time but you should
   // never do stuff at draw time if you can do it at init time.
-  var matrix = makeTranslation(-50, -75, -15);
-  matrix = matrixMultiply(matrix, makeXRotation(Math.PI));
+  var matrix = makeTranslation(-50, -75, -15)
+  matrix = matrixMultiply(matrix, makeXRotation(Math.PI))
 
   for (var ii = 0; ii < positions.length; ii += 3) {
-    var vector = matrixVectorMultiply([positions[ii + 0], positions[ii + 1], positions[ii + 2], 1], matrix);
-    positions[ii + 0] = vector[0];
-    positions[ii + 1] = vector[1];
-    positions[ii + 2] = vector[2];
+    var vector = matrixVectorMultiply([positions[ii + 0], positions[ii + 1], positions[ii + 2], 1], matrix)
+    positions[ii + 0] = vector[0]
+    positions[ii + 1] = vector[1]
+    positions[ii + 2] = vector[2]
   }
 
-  gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW)
 }
 
-function matrixVectorMultiply(v, m) {
-  var dst = [];
+function matrixVectorMultiply (v, m) {
+  var dst = []
   for (var i = 0; i < 4; ++i) {
-    dst[i] = 0.0;
-    for (var j = 0; j < 4; ++j)
-      dst[i] += v[j] * m[j * 4 + i];
+    dst[i] = 0.0
+    for (var j = 0; j < 4; ++j) {
+      dst[i] += v[j] * m[j * 4 + i]
+    }
   }
-  return dst;
-};
-
+  return dst
+}
